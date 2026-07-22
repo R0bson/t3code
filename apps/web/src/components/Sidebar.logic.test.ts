@@ -168,7 +168,6 @@ describe("hasUnseenCompletion", () => {
         hasPendingUserInput: false,
         interactionMode: "default",
         latestTurn: makeLatestTurn(),
-        latestUserMessageAt: null,
         lastVisitedAt: "2026-03-09T10:04:00.000Z",
         session: null,
       }),
@@ -183,7 +182,6 @@ describe("hasUnseenCompletion", () => {
         hasPendingUserInput: false,
         interactionMode: "default",
         latestTurn: makeLatestTurn(),
-        latestUserMessageAt: null,
         lastVisitedAt: undefined,
         session: null,
       }),
@@ -640,10 +638,10 @@ describe("resolveThreadStatusPill", () => {
   const baseThread = {
     hasActionableProposedPlan: false,
     hasPendingApprovals: false,
+    hasPendingTurnStart: false,
     hasPendingUserInput: false,
     interactionMode: "plan" as const,
     latestTurn: null,
-    latestUserMessageAt: null,
     lastVisitedAt: undefined,
     session: {
       threadId: ThreadId.make("thread-1"),
@@ -693,7 +691,7 @@ describe("resolveThreadStatusPill", () => {
       resolveThreadStatusPill({
         thread: {
           ...baseThread,
-          latestUserMessageAt: "2026-03-09T10:00:01.000Z",
+          hasPendingTurnStart: true,
           session: null,
         },
       }),
@@ -705,7 +703,7 @@ describe("resolveThreadStatusPill", () => {
       resolveThreadStatusPill({
         thread: {
           ...baseThread,
-          latestUserMessageAt: "2026-03-09T10:00:01.000Z",
+          hasPendingTurnStart: true,
           session: {
             ...baseThread.session,
             status: "ready",
@@ -715,27 +713,6 @@ describe("resolveThreadStatusPill", () => {
         },
       }),
     ).toMatchObject({ label: "Working", pulse: true });
-  });
-
-  it("does not show stale pending work after the turn acknowledges the message", () => {
-    expect(
-      resolveThreadStatusPill({
-        thread: {
-          ...baseThread,
-          latestUserMessageAt: "2026-03-09T10:00:01.000Z",
-          latestTurn: {
-            ...makeLatestTurn(),
-            requestedAt: "2026-03-09T10:00:02.000Z",
-          },
-          session: {
-            ...baseThread.session,
-            status: "ready",
-            activeTurnId: null,
-            updatedAt: "2026-03-09T10:05:00.000Z",
-          },
-        },
-      }),
-    ).toBeNull();
   });
 
   it("shows plan ready when a settled plan turn has a proposed plan ready for follow-up", () => {
