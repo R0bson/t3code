@@ -66,6 +66,41 @@ describe("AssetAccess", () => {
     }).pipe(Effect.provide(testLayer)),
   );
 
+  it.effect(
+    "resolves a recording referenced by an HTML report without exposing private files",
+    () =>
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-recording-report-" });
+        yield* fileSystem.makeDirectory(path.join(root, "media"));
+        yield* fileSystem.writeFileString(
+          path.join(root, "index.html"),
+          '<video controls src="media/recording.webm"></video>',
+        );
+        const recordingPath = path.join(root, "media", "recording.webm");
+        yield* fileSystem.writeFile(recordingPath, new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]));
+        yield* fileSystem.writeFileString(path.join(root, "media", ".env"), "SECRET=value");
+        yield* fileSystem.writeFileString(path.join(root, "media", "private.json"), "{}");
+        const result = yield* issueAssetUrl({
+          resource: {
+            _tag: "workspace-file",
+            threadId: ThreadId.make("thread-recording"),
+            path: "index.html",
+          },
+          workspaceRoot: root,
+        });
+        const token = result.relativeUrl.slice(`${ASSET_ROUTE_PREFIX}/`.length).split("/")[0]!;
+        expect(yield* resolveAsset(token, "media/recording.webm")).toEqual({
+          kind: "file",
+          path: yield* fileSystem.realPath(recordingPath),
+        });
+        expect(yield* resolveAsset(token, "media/.env")).toBeNull();
+        expect(yield* resolveAsset(token, "media/private.json")).toBeNull();
+        expect(yield* resolveAsset(token, "../media/recording.webm")).toBeNull();
+      }).pipe(Effect.provide(testLayer)),
+  );
+
   it.effect("rejects workspace files outside the authorized root", () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
