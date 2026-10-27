@@ -50,6 +50,7 @@ const PREVIEW_ASSET_EXTENSIONS = new Set([
   ".css",
   ".js",
   ".mjs",
+  ".webm",
   ".otf",
   ".ttf",
   ".woff",
